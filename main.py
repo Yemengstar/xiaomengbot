@@ -9,7 +9,7 @@ class MyPlugin(Star):
 
     async def initialize(self):
         """插件初始化（启动时执行一次）"""
-        logger.info("HelloWorld 插件已加载")
+        logger.info("HelloWorld 插件已经加载")
 
     @filter.command("helloworld")
     async def helloworld(self, event: AstrMessageEvent):
