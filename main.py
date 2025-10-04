@@ -1,24 +1,60 @@
-from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
+import aiohttp
+from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
 
-@register("helloworld", "yemengstar", "一个简单的 Hello World 插件", "0.1.1")
-class MyPlugin(Star):
+API_KEY = "fbf6abe122a249abbf74b478f26428fc"
+BASE_URL = "https://devapi.qweather.com/v7/weather/now"
+
+@register("weather_plugin", "yemengstar", "一个简单的天气查询插件", "0.1.2")
+class WeatherPlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
 
     async def initialize(self):
-        """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
-    
-    # 注册指令的装饰器。指令名为 helloworld。注册成功后，发送 `/helloworld` 就会触发这个指令，并回复 `你好, {user_name}!`
-    @filter.command("helloworld")
-    async def helloworld(self, event: AstrMessageEvent):
-        """这是一个 hello world 指令""" # 这是 handler 的描述，将会被解析方便用户了解插件内容。建议填写。
-        user_name = event.get_sender_name()
-        message_str = event.message_str # 用户发的纯文本消息字符串
-        message_chain = event.get_messages() # 用户所发的消息的消息链 # from astrbot.api.message_components import *
-        logger.info(message_chain)
-        yield event.plain_result(f"Hello, {user_name}, 你发了 {message_str}!") # 发送一条纯文本消息
+        """插件初始化"""
+        logger.info("天气插件已加载")
+
+    @filter.command()
+    async def get_weather(self, ctx: Context, event: AstrMessageEvent):
+        """
+        当用户发送 xx天气 时触发
+        """
+        msg = event.message_str.strip()
+
+        if not msg.endswith("天气"):
+            return  # 不处理其他消息
+
+        city = msg[:-2]  # 去掉“天气”，得到城市名
+        if not city:
+            yield event.plain_result("请发送 城市+天气，例如：北京天气")
+            return
+
+        # 调用和风天气 API
+        async with aiohttp.ClientSession() as session:
+            try:
+                params = {"location": city, "key": API_KEY}
+                async with session.get(BASE_URL, params=params) as resp:
+                    data = await resp.json()
+                    logger.info(data)
+
+                    if "now" not in data:
+                        yield event.plain_result(f"未能获取 {city} 的天气，请确认城市名称。")
+                        return
+
+                    now = data["now"]
+                    text = now["text"]      # 天气情况
+                    temp = now["temp"]      # 温度
+                    humidity = now["humidity"]  # 湿度
+                    wind_dir = now["windDir"]
+
+                    result = f"{city}：{text}，气温 {temp}℃，湿度 {humidity}%，风向 {wind_dir}"
+                    yield event.plain_result(result)
+
+            except Exception as e:
+                logger.error(f"获取天气失败: {e}")
+                yield event.plain_result("查询天气失败，请稍后再试。")
 
     async def terminate(self):
-        """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
+        """插件销毁"""
+        logger.info("天气插件已卸载")
