@@ -95,7 +95,7 @@ FORECAST_TEMPLATE = """
     "astrbot_plugin_weather-qweather",
     "yemengstar",
     "一个基于和风天气API的天气查询插件",
-    "0.1.0"
+    "0.2.0"
 )
 class WeatherPlugin(Star):
     def __init__(self, context: Context, config: dict):
