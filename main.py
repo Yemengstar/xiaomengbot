@@ -100,7 +100,7 @@ class WeatherPlugin(Star):
     # ========== 城市转 Location ID ==========
     async def get_location_id(self, city_name: str) -> Optional[str]:
         try:
-            url = f"{self.api_base}/v2/city/lookup"
+            url = f"https://{self.api_base}/geo/v2/city/lookup"
             params = {"location": city_name}
             headers = {"X-QW-Api-Key": self.api_key}
             async with aiohttp.ClientSession() as session:
