@@ -1,19 +1,15 @@
 import aiohttp
-import datetime
-from typing import Optional, List, Dict
 import traceback
+from typing import Optional, List
 
 from astrbot.api.all import (
     Star, Context, register,
-    AstrMessageEvent, command_group, command,
-    MessageEventResult, llm_tool
+    AstrMessageEvent, command_group,
+    MessageEventResult
 )
-from astrbot.api.event import filter
+
 from astrbot.api import logger
 
-# ==============================
-# 1) HTML 模板
-# ==============================
 
 CURRENT_WEATHER_TEMPLATE = """
 <html>
@@ -167,332 +163,151 @@ FORECAST_TEMPLATE = """
 </html>
 """
 
+
+# ==============================
+# 插件类
+# ==============================
+
 @register(
-    "astrbot_plugin_weather-Amap",
-    "BB0813",
-    "一个基于高德开放平台API的天气查询插件",
-    "1.0.0",
-    "https://github.com/BB0813/astrbot_plugin_weather-Amap"
+    "astrbot_plugin_weather-qweather",
+    "yemengstar",
+    "一个基于和风天气API的天气查询插件（新版）",
+    "0.3.0"
 )
 class WeatherPlugin(Star):
-    """
-    这是一个调用高德开放平台API的天气查询插件示例。
-    支持 /weather current /weather forecast /weather help
-    - current: 查询当前实况
-    - forecast: 查询未来4天天气预报
-    """
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
         self.config = config
-        # 使用配置中的 amap_api_key
-        self.api_key = config.get("amap_api_key", "")
-        self.default_city = config.get("default_city", "北京")
-        # 新增配置项：send_mode，控制发送模式 "image" 或 "text"
-        self.send_mode = config.get("send_mode", "image")
-        logger.debug(f"WeatherPlugin initialized with API key: {self.api_key}, default_city: {self.default_city}, send_mode: {self.send_mode}")
+        self.api_key = config.get("qweather_api_key", "")
+        self.default_city = config.get("default_city", "")
+        self.send_mode = config.get("send_mode", "")
+        self.api_base = config.get("qweather_base", "")
 
-    # =============================
-    # 命令组 "weather"
-    # =============================
+    # ========== 命令组 ==========
     @command_group("weather")
     def weather_group(self):
-        """
-        天气相关功能命令组。
-        使用方法：
-        /weather <子指令> <城市或其它参数>
-        子指令包括：current, forecast, help
-        """
+        """天气相关命令组 /weather current | forecast | help"""
         pass
 
     @weather_group.command("current")
-    async def weather_current(self, event: AstrMessageEvent, city: Optional[str] = None):
-        """
-        查看当前实况天气
-        用法: /weather current <城市>
-        示例: /weather current 北京
-        """
-        logger.info(f"User called /weather current with city={city}")
+    async def weather_current(self, event: AstrMessageEvent, city: str):
         if not city:
             city = self.default_city
-        if not self.api_key:
-            yield event.plain_result("未配置 Amap API Key，无法查询天气。请在管理面板中配置后再试。")
+        location_id = await self.get_location_id(city)
+        if not location_id:
+            yield event.plain_result(f"无法识别城市: {city}")
             return
-        data = await self.get_current_weather_by_city(city)
-        if data is None:
-            yield event.plain_result(f"查询 [{city}] 的当前天气失败，请稍后再试。")
-            return
-        # 根据配置决定发送模式
-        if self.send_mode == "image":
-            result_img_url = await self.render_current_weather(data)
-            yield event.image_result(result_img_url)
-        else:
-            text = (
-                f"当前天气：\n"
-                f"城市: {data['city']}\n"
-                f"天气: {data['desc']}\n"
-                f"温度: {data['temp']}℃\n"
-                f"湿度: {data['humidity']}%\n"
-                f"风速: {data['wind_speed']} km/h"
-            )
-            yield event.plain_result(text)
-
-    @weather_group.command("forecast")
-    async def weather_forecast(self, event: AstrMessageEvent, city: Optional[str] = None):
-        """
-        查看未来4天天气预报
-        用法: /weather forecast <城市>
-        示例: /weather forecast 北京
-        """
-        logger.info(f"User called /weather forecast with city={city}")
-        if not city:
-            city = self.default_city
-        if not self.api_key:
-            yield event.plain_result("未配置 Amap API Key，无法查询天气。请在管理面板中配置后再试。")
-            return
-        forecast_data = await self.get_forecast_weather_by_city(city)
-        if forecast_data is None:
-            yield event.plain_result(f"查询 [{city}] 的未来天气失败，请稍后再试。")
-            return
-        suggestion_data = await self.get_life_suggestion_by_city(city)
-        # 根据配置决定发送模式
-        if self.send_mode == "image":
-            forecast_img_url = await self.render_forecast_weather(
-                city,
-                days_data=forecast_data,
-                suggestions=suggestion_data
-            )
-            yield event.image_result(forecast_img_url)
-        else:
-            text = f"未来{len(forecast_data)}天天气预报\n城市: {city}\n"
-            for day in forecast_data:
-                text += (
-                    f"{day['date']}: 白天: {day['text_day']} - {day['high']}℃, "
-                    f"夜晚: {day['text_night']} - {day['low']}℃, "
-                    f"湿度: {day['humidity']}%, "
-                    f"风速: {day['wind_speed']} km/h\n"
-                )
-            if suggestion_data:
-                text += "生活指数:\n"
-                for s in suggestion_data:
-                    text += f"{s['name']}: {s['brief']}\n"
-            yield event.plain_result(text)
-
-    @weather_group.command("help")
-    async def weather_help(self, event: AstrMessageEvent):
-        """
-        显示天气插件的帮助信息
-        用法: /weather help
-        """
-        logger.info("User called /weather help")
-        msg = (
-            "=== 高德开放平台插件命令列表 ===\n"
-            "/weather current <城市>  查看当前实况\n"
-            "/weather forecast <城市> 查看未来4天天气预报\n"
-            "/weather help            显示本帮助\n"
-        )
-        yield event.plain_result(msg)
-
-    # =============================
-    # LLM Function-Calling (可选)
-    # =============================
-    @llm_tool(name="get_current_weather")
-    async def get_current_weather_tool(self, event: AstrMessageEvent, city: str) -> MessageEventResult:
-        '''当用户对某个城市的天气情况感兴趣时，用于获取当前天气信息。
-
-        Args:
-            city (string): 地点，例如：杭州，或者浙江杭州
-        '''
-        if not city:
-            city = self.default_city
-        data = await self.get_current_weather_by_city(city)
+        data = await self.get_current_weather(location_id, city)
         if not data:
-            yield event.plain_result(f"查询 [{city}] 天气失败，请稍后再试。")
+            yield event.plain_result(f"查询 [{city}] 当前天气失败")
             return
         if self.send_mode == "image":
             url = await self.render_current_weather(data)
             yield event.image_result(url)
         else:
-            text = (
-                f"当前天气：\n"
-                f"城市: {data['city']}\n"
-                f"天气: {data['desc']}\n"
-                f"温度: {data['temp']}℃\n"
-                f"湿度: {data['humidity']}%\n"
-                f"风速: {data['wind_speed']} km/h"
+            yield event.plain_result(
+                f"{city} 当前天气:\n"
+                f"天气: {data['text']} 气温: {data['temp']}℃ (体感 {data['feelsLike']}℃)\n"
+                f"湿度: {data['humidity']}% 风向: {data['windDir']} 风速: {data['windSpeed']} km/h"
             )
-            yield event.plain_result(text)
 
-    @llm_tool(name="get_forecast_weather")
-    async def get_forecast_weather_tool(self, event: AstrMessageEvent, city: str) -> MessageEventResult:
-        '''当用户对某个城市未来天气预报感兴趣时，用于获取天气预报信息。
-
-        Args:
-            city (string): 地点，例如：杭州，或者浙江杭州
-        '''
+    @weather_group.command("forecast")
+    async def weather_forecast(self, event: AstrMessageEvent, city: str):
         if not city:
             city = self.default_city
-        forecast_data = await self.get_forecast_weather_by_city(city)
-        suggestion_data = await self.get_life_suggestion_by_city(city)
-        if not forecast_data:
-            yield event.plain_result(f"查询 [{city}] 天气失败，请稍后再试。")
+        location_id = await self.get_location_id(city)
+        if not location_id:
+            yield event.plain_result(f"无法识别城市: {city}")
+            return
+        data = await self.get_forecast_weather(location_id)
+        if not data:
+            yield event.plain_result(f"查询 [{city}] 天气预报失败")
             return
         if self.send_mode == "image":
-            url = await self.render_forecast_weather(city, forecast_data, suggestion_data)
+            url = await self.render_forecast_weather(city, data)
             yield event.image_result(url)
         else:
-            text = f"未来{len(forecast_data)}天天气预报\n城市: {city}\n"
-            for day in forecast_data:
+            text = f"未来{len(data)}天天气预报 ({city}):\n"
+            for day in data:
                 text += (
-                    f"{day['date']}: 白天: {day['text_day']} - {day['high']}℃, "
-                    f"夜晚: {day['text_night']} - {day['low']}℃, "
-                    f"湿度: {day['humidity']}%, "
-                    f"风速: {day['wind_speed']} km/h\n"
+                    f"{day['fxDate']}: 白天 {day['textDay']} {day['tempMax']}℃ | "
+                    f"夜晚 {day['textNight']} {day['tempMin']}℃ | "
+                    f"湿度 {day['humidity']}% 风速 {day['windSpeedDay']} km/h\n"
                 )
-            if suggestion_data:
-                text += "生活指数:\n"
-                for s in suggestion_data:
-                    text += f"{s['name']}: {s['brief']}\n"
-
             yield event.plain_result(text)
 
-    # =============================
-    # 核心逻辑
-    # =============================
-    async def get_current_weather_by_city(self, city: str) -> Optional[dict]:
-        """
-        调用高德开放平台API，返回城市当前实况
-        """
-        logger.debug(f"get_current_weather_by_city city={city}")
-        url = "https://restapi.amap.com/v3/weather/weatherInfo"
-        params = {
-            "key": self.api_key,
-            "city": city,
-            "extensions": "base"
-        }
-        logger.debug(f"Requesting: {url}, params={params}")
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params, timeout=10) as resp:
-                    logger.debug(f"Response status: {resp.status}")
-                    if resp.status == 200:
-                        data = await resp.json()
-                        logger.debug(f"Amap now raw data: {data}")
-                        lives = data.get("lives", [])
-                        if not lives:
-                            return None
-                        now = lives[0]
-                        desc = now.get("weather", "未知")
-                        temp = now.get("temperature", "0")
-                        humidity = now.get("humidity", "0")
-                        wind_speed = now.get("windpower", "0")
-                        return {
-                            "city": city,
-                            "desc": desc,
-                            "temp": temp,
-                            "humidity": humidity,
-                            "wind_speed": wind_speed
-                        }
+    @weather_group.command("help")
+    async def weather_help(self, event: AstrMessageEvent):
+        msg = (
+            "=== 和风天气插件命令列表 ===\n"
+            "/weather current <城市>  查看当前实况\n"
+            "/weather forecast <城市> 查看未来3天天气预报\n"
+            "/weather help            显示本帮助\n"
+            )
+        yield event.plain_result(msg)
 
-                    else:
-                        logger.error(f"get_current_weather_by_city status={resp.status}")
+    # ========== 城市转 Location ID ==========
+    async def get_location_id(self, city_name: str) -> Optional[str]:
+        try:
+            url = f"https://{self.api_base}/geo/v2/city/lookup"
+            params = {"location": city_name}
+            headers = {"X-QW-Api-Key": self.api_key}
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params, headers=headers) as resp:
+                    data = await resp.json()
+                    if "location" not in data or not data["location"]:
                         return None
+                    return data["location"][0]["id"]  # 返回第一个匹配项的 ID
         except Exception as e:
-            logger.error(f"get_current_weather_by_city error: {e}")
+            logger.error(f"get_location_id error: {e}")
             logger.error(traceback.format_exc())
             return None
 
-    async def get_forecast_weather_by_city(self, city: str) -> Optional[List[dict]]:
-        """
-        调用高德开放平台API，获取未来4天天气预报
-        """
-        logger.debug(f"get_forecast_weather_by_city city={city}")
-        url = "https://restapi.amap.com/v3/weather/weatherInfo"
-        params = {
-            "key": self.api_key,
-            "city": city,
-            "extensions": "all"
-        }
-        logger.debug(f"Requesting forecast: {url}, params={params}")
+    # ========== 当前天气查询 ==========
+    async def get_current_weather(self, location_id: str, city: str) -> Optional[dict]:
         try:
+            url = f"httpsL{self.api_base}/v7/weather/now"
+            params = {"location": location_id}
+            headers = {"X-QW-Api-Key": self.api_key}
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params, timeout=10) as resp:
-                    logger.debug(f"Response status: {resp.status}")
-                    if resp.status == 200:
-                        data = await resp.json()
-                        logger.debug(f"Amap daily raw data: {data}")
-                        forecasts = data.get("forecasts", [])
-                        if not forecasts:
-                            return None
-                        daily_list = forecasts[0].get("casts", [])
-                        if not daily_list:
-                            return None
-                        result = []
-                        for day_data in daily_list:
-                            date = day_data.get("date", "1970-01-01")
-                            text_day = day_data.get("dayweather", "未知")
-                            text_night = day_data.get("nightweather", "未知")
-
-                            high = day_data.get("daytemp", "0")
-                            low = day_data.get("nighttemp", "0")
-                            humidity = day_data.get("humidity", "0")
-                            wind_speed = day_data.get("daypower", "0")
-                            result.append({
-                                "date": date,
-                                "text_day": text_day,
-                                "text_night": text_night,
-                                "high": high,
-                                "low": low,
-                                "humidity": humidity,
-                                "wind_speed": wind_speed
-                            })
-                        return result
-                    else:
-                        logger.error(f"get_forecast_weather_by_city status={resp.status}")
+                async with session.get(url, params=params, headers=headers) as resp:
+                    data = await resp.json()
+                    if "now" not in data:
                         return None
+                    return {**data["now"], "city": city}
         except Exception as e:
-            logger.error(f"get_forecast_weather_by_city error: {e}")
+            logger.error(f"get_current_weather error: {e}")
             logger.error(traceback.format_exc())
             return None
 
-    async def get_life_suggestion_by_city(self, city: str) -> Optional[List[dict]]:
-        """
-        调用高德开放平台API，获取生活指数
-        """
-        logger.debug(f"get_life_suggestion_by_city city={city}")
-        # 高德开放平台不提供生活指数API，故此功能暂时无法实现
-        return None
+    # ========== 天气预报查询 ==========
+    async def get_forecast_weather(self, location_id: str) -> Optional[List[dict]]:
+        try:
+            url = f"{self.api_base}/v7/weather/3d"
+            params = {"location": location_id}
+            headers = {"X-QW-Api-Key": self.api_key}
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params, headers=headers) as resp:
+                    data = await resp.json()
+                    if "daily" not in data:
+                        return None
+                    return data["daily"]
+        except Exception as e:
+            logger.error(f"get_forecast_weather error: {e}")
+            logger.error(traceback.format_exc())
+            return None
 
+    # ========== 渲染 HTML ==========
     async def render_current_weather(self, data: dict) -> str:
-        """
-        渲染当前天气图文信息
-        """
-        logger.debug(f"render_current_weather for {data}")
-        url = await self.html_render(
+        return await self.html_render(
             CURRENT_WEATHER_TEMPLATE,
-            {
-                "city": data["city"],
-                "desc": data["desc"],
-                "temp": data["temp"],
-                "humidity": data["humidity"],
-                "wind_speed": data["wind_speed"]
-            },
+            data,
             return_url=True
         )
-        return url
 
-    async def render_forecast_weather(self, city: str, days_data: List[dict], suggestions: Optional[List[dict]] = None) -> str:
-        """
-        渲染未来4天天气预报图文信息
-        """
-        logger.debug(f"render_forecast_weather for city={city}, days={days_data}, suggestions={suggestions}")
-        url = await self.html_render(
+    async def render_forecast_weather(self, city: str, days: List[dict]) -> str:
+        return await self.html_render(
             FORECAST_TEMPLATE,
-            {
-                "city": city,
-                "days": days_data,
-                "total_days": len(days_data),
-                "suggestions": suggestions or []
-            },
+            {"city": city, "days": days, "total_days": len(days)},
             return_url=True
         )
-        return url
