@@ -7,14 +7,162 @@ from astrbot.api.all import (
     AstrMessageEvent, command_group,
     MessageEventResult
 )
+
 from astrbot.api import logger
 
-# ==============================
-# HTML 模板（略）
-# ==============================
 
-CURRENT_WEATHER_TEMPLATE = """..."""  # 保持不变，见你原代码
-FORECAST_TEMPLATE = """..."""         # 保持不变，见你原代码
+CURRENT_WEATHER_TEMPLATE = """
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 1280px; /* 确保匹配 render 预设的图片尺寸 */
+      height: 720px;
+      background-color: #fff;
+    }
+    .weather-container {
+      width: 100%;
+      height: 100%;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* 垂直居中 */
+      align-items: center; /* 水平居中 */
+      background-color: #ffffff;
+      color: #333;
+      font-family: sans-serif;
+      font-size: 30px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .weather-container h2 {
+      margin-top: 0;
+      color: #4e6ef2;
+      text-align: center;
+      font-size: 40px;
+    }
+    .weather-info {
+      margin-bottom: 10px;
+    }
+    .source-info {
+      border-top: 1px solid #ddd;
+      margin-top: 12px;
+      padding-top: 12px;
+      font-size: 16px;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div class="weather-container">
+    <h2>当前天气</h2>
+    
+    <div class="weather-info">
+      <strong>城市:</strong> {{ city }}
+    </div>
+    <div class="weather-info">
+      <strong>天气:</strong> {{ desc }}
+    </div>
+    <div class="weather-info">
+      <strong>温度:</strong> {{ temp }}℃ (体感: {{ feels_like }}℃)
+    </div>
+    <div class="weather-info">
+      <strong>湿度:</strong> {{ humidity }}%
+    </div>
+    <div class="weather-info">
+      <strong>风速:</strong> {{ wind_speed }} km/h
+    </div>
+    
+    <div class="source-info">
+      数据来源: 心知天气（Seniverse） 免费API
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+FORECAST_TEMPLATE = """
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 1280px;
+      height: 720px;
+      background-color: #fff;
+    }
+    .forecast-container {
+      width: 100%;
+      height: 100%;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background-color: #fff;
+      color: #333;
+      font-family: sans-serif;
+      font-size: 30px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .forecast-container h2 {
+      margin-top: 0;
+      color: #4e6ef2;
+      text-align: center;
+      font-size: 40px;
+    }
+    .city-info {
+      margin-bottom: 8px;
+    }
+    .day-item {
+      margin-bottom: 8px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+    }
+    .day-title {
+      font-weight: bold;
+      color: #4e6ef2;
+      margin-bottom: 4px;
+    }
+    .source-info {
+      font-size: 16px;
+      color: #999;
+      margin-top: 12px;
+      border-top: 1px solid #ddd;
+      padding-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="forecast-container">
+    <h2>未来{{ total_days }}天天气预报</h2>
+    <div class="city-info">
+      <strong>城市:</strong> {{ city }}
+    </div>
+
+    {% for day in days %}
+    <div class="day-item">
+      <div class="day-title">{{ day.date }}</div>
+      <div><strong>白天:</strong> {{ day.text_day }} — {{ day.high }}℃</div>
+      <div><strong>夜晚:</strong> {{ day.text_night }} — {{ day.low }}℃</div>
+      <div><strong>湿度:</strong> {{ day.humidity }}%  <strong>风速:</strong> {{ day.wind_speed }} km/h</div>
+    </div>
+    {% endfor %}
+
+    <div class="source-info">
+      数据来源: 高德开放平台（Amap） 免费API
+    </div>
+  </div>
+</body>
+</html>
+"""
+
 
 # ==============================
 # 插件类
@@ -31,8 +179,8 @@ class WeatherPlugin(Star):
         super().__init__(context)
         self.config = config
         self.api_key = config.get("qweather_api_key", "")
-        self.default_city = config.get("default_city", "北京")
-        self.send_mode = config.get("send_mode", "image")
+        self.default_city = config.get("default_city", "")
+        self.send_mode = config.get("send_mode", "")
         self.api_base = config.get("qweather_base", "")
 
     # ========== 命令组 ==========
@@ -90,12 +238,13 @@ class WeatherPlugin(Star):
 
     @weather_group.command("help")
     async def weather_help(self, event: AstrMessageEvent):
-        yield event.plain_result(
-            "=== 天气查询插件命令 ===\n"
-            "/weather current <城市>  查询当前天气\n"
-            "/weather forecast <城市> 查询未来3天天气\n"
-            "/weather help            显示帮助"
-        )
+        msg = (
+            "=== 和风天气插件命令列表 ===\n"
+            "/weather current <城市>  查看当前实况\n"
+            "/weather forecast <城市> 查看未来4天天气预报\n"
+            "/weather help            显示本帮助\n"
+            )
+        yield event.plain_result(msg)
 
     # ========== 城市转 Location ID ==========
     async def get_location_id(self, city_name: str) -> Optional[str]:
@@ -117,7 +266,7 @@ class WeatherPlugin(Star):
     # ========== 当前天气查询 ==========
     async def get_current_weather(self, location_id: str, city: str) -> Optional[dict]:
         try:
-            url = f"{self.api_base}/v7/weather/now"
+            url = f"https://{self.api_base}/v7/weather/now"
             params = {"location": location_id}
             headers = {"X-QW-Api-Key": self.api_key}
             async with aiohttp.ClientSession() as session:
@@ -134,7 +283,7 @@ class WeatherPlugin(Star):
     # ========== 天气预报查询 ==========
     async def get_forecast_weather(self, location_id: str) -> Optional[List[dict]]:
         try:
-            url = f"{self.api_base}/v7/weather/3d"
+            url = f"https://{self.api_base}/v7/weather/3d"
             params = {"location": location_id}
             headers = {"X-QW-Api-Key": self.api_key}
             async with aiohttp.ClientSession() as session:
