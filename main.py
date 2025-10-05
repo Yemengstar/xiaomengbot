@@ -42,7 +42,7 @@ class WeatherPlugin(Star):
         pass
 
     @weather_group.command("current")
-    async def weather_current(self, event: AstrMessageEvent, city: Optional[str] = None):
+    async def weather_current(self, event: AstrMessageEvent, city: str):
         if not city:
             city = self.default_city
         location_id = await self.get_location_id(city)
@@ -64,7 +64,7 @@ class WeatherPlugin(Star):
             )
 
     @weather_group.command("forecast")
-    async def weather_forecast(self, event: AstrMessageEvent, city: Optional[str] = None):
+    async def weather_forecast(self, event: AstrMessageEvent, city: str):
         if not city:
             city = self.default_city
         location_id = await self.get_location_id(city)
@@ -89,7 +89,7 @@ class WeatherPlugin(Star):
             yield event.plain_result(text)
 
     @weather_group.command("help")
-    async def weather_help(self, event: AstrMessageEvent, *args):
+    async def weather_help(self, event: AstrMessageEvent):
         yield event.plain_result(
             "=== 天气查询插件命令 ===\n"
             "/weather current <城市>  查询当前天气\n"
@@ -108,8 +108,7 @@ class WeatherPlugin(Star):
                     data = await resp.json()
                     if "location" not in data or not data["location"]:
                         return None
-                    # return data["location"][0]["id"]  # 返回第一个匹配项的 ID
-                    return "101010100"
+                    return data["location"][0]["id"]  # 返回第一个匹配项的 ID
         except Exception as e:
             logger.error(f"get_location_id error: {e}")
             logger.error(traceback.format_exc())
