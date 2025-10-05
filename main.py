@@ -266,7 +266,7 @@ class WeatherPlugin(Star):
     # ========== 当前天气查询 ==========
     async def get_current_weather(self, location_id: str, city: str) -> Optional[dict]:
         try:
-            url = f"httpsL{self.api_base}/v7/weather/now"
+            url = f"https://{self.api_base}/v7/weather/now"
             params = {"location": location_id}
             headers = {"X-QW-Api-Key": self.api_key}
             async with aiohttp.ClientSession() as session:
@@ -283,7 +283,7 @@ class WeatherPlugin(Star):
     # ========== 天气预报查询 ==========
     async def get_forecast_weather(self, location_id: str) -> Optional[List[dict]]:
         try:
-            url = f"{self.api_base}/v7/weather/3d"
+            url = f"https://{self.api_base}/v7/weather/3d"
             params = {"location": location_id}
             headers = {"X-QW-Api-Key": self.api_key}
             async with aiohttp.ClientSession() as session:
