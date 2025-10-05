@@ -67,7 +67,7 @@ CURRENT_WEATHER_TEMPLATE = """
       <strong>天气:</strong> {{ desc }}
     </div>
     <div class="weather-info">
-      <strong>温度:</strong> {{ temp }}℃ (体感: {{ feels_like }}℃)
+      <strong>温度:</strong> {{ temp }}℃
     </div>
     <div class="weather-info">
       <strong>湿度:</strong> {{ humidity }}%
@@ -77,7 +77,7 @@ CURRENT_WEATHER_TEMPLATE = """
     </div>
     
     <div class="source-info">
-      数据来源: 心知天气（Seniverse） 免费API
+      数据来源: 和风天气（QWeather）
     </div>
   </div>
 </body>
@@ -156,7 +156,7 @@ FORECAST_TEMPLATE = """
     {% endfor %}
 
     <div class="source-info">
-      数据来源: 高德开放平台（Amap） 免费API
+      数据来源: 和风天气（QWeather）
     </div>
   </div>
 </body>
@@ -172,7 +172,7 @@ FORECAST_TEMPLATE = """
     "astrbot_plugin_weather-qweather",
     "yemengstar",
     "一个基于和风天气API的天气查询插件（新版）",
-    "0.3.0"
+    "0.3.1"
 )
 class WeatherPlugin(Star):
     def __init__(self, context: Context, config: dict):
