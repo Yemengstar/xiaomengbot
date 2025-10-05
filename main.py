@@ -108,7 +108,8 @@ class WeatherPlugin(Star):
                     data = await resp.json()
                     if "location" not in data or not data["location"]:
                         return None
-                    return data["location"][0]["id"]  # 返回第一个匹配项的 ID
+                    # return data["location"][0]["id"]  # 返回第一个匹配项的 ID
+                    return "101010100"
         except Exception as e:
             logger.error(f"get_location_id error: {e}")
             logger.error(traceback.format_exc())
