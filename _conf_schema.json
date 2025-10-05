@@ -5,6 +5,12 @@
     "hint": "请前往 https://console.qweather.com/ 注册并获取 API Key",
     "obvious_hint": true
   },
+  "qweather_base": {
+    "description": "和风天气 API Host",
+    "type": "string",
+    "hint": "请前往 https://console.qweather.com/ 注册并获取 API Host",
+    "obvious_hint": true
+  },
   "default_city": {
     "description": "默认城市",
     "type": "string",

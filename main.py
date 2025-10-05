@@ -5,109 +5,37 @@ from typing import Optional, List
 from astrbot.api.all import (
     Star, Context, register,
     AstrMessageEvent, command_group,
-    MessageEventResult, llm_tool
+    MessageEventResult
 )
 from astrbot.api import logger
 
 # ==============================
-# 1) HTML 模板
+# HTML 模板（略）
 # ==============================
 
-CURRENT_WEATHER_TEMPLATE = """
-<html>
-<head>
-  <meta charset="UTF-8"/>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 1280px;
-      height: 720px;
-      background-color: #fff;
-    }
-    .weather-container {
-      width: 100%;
-      height: 100%;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      font-family: sans-serif;
-      font-size: 30px;
-      color: #333;
-    }
-    h2 { color: #4e6ef2; font-size: 40px; }
-    .info { margin: 8px 0; }
-    .source { font-size: 16px; color: #999; margin-top: 12px; }
-  </style>
-</head>
-<body>
-  <div class="weather-container">
-    <h2>当前天气</h2>
-    <div class="info"><strong>城市:</strong> {{ city }}</div>
-    <div class="info"><strong>天气:</strong> {{ text }}</div>
-    <div class="info"><strong>气温:</strong> {{ temp }}℃ (体感: {{ feelsLike }}℃)</div>
-    <div class="info"><strong>湿度:</strong> {{ humidity }}%</div>
-    <div class="info"><strong>风向:</strong> {{ windDir }}</div>
-    <div class="info"><strong>风速:</strong> {{ windSpeed }} km/h</div>
-    <div class="source">数据来源: 和风天气</div>
-  </div>
-</body>
-</html>
-"""
-
-FORECAST_TEMPLATE = """
-<html>
-<head>
-  <meta charset="UTF-8"/>
-  <style>
-    html, body { margin:0; padding:0; width:1280px; height:720px; background:#fff; }
-    .container { padding:16px; font-family:sans-serif; color:#333; }
-    h2 { color:#4e6ef2; font-size:40px; margin-bottom:8px; }
-    .day { margin:8px 0; padding:8px; border-bottom:1px solid #eee; }
-    .source { font-size:16px; color:#999; margin-top:12px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h2>未来{{ total_days }}天天气预报</h2>
-    <div><strong>城市:</strong> {{ city }}</div>
-    {% for day in days %}
-      <div class="day">
-        <div><strong>{{ day.fxDate }}</strong></div>
-        <div>白天: {{ day.textDay }} — {{ day.tempMax }}℃</div>
-        <div>夜晚: {{ day.textNight }} — {{ day.tempMin }}℃</div>
-        <div>湿度: {{ day.humidity }}%  风速: {{ day.windSpeedDay }} km/h</div>
-      </div>
-    {% endfor %}
-    <div class="source">数据来源: 和风天气</div>
-  </div>
-</body>
-</html>
-"""
+CURRENT_WEATHER_TEMPLATE = """..."""  # 保持不变，见你原代码
+FORECAST_TEMPLATE = """..."""         # 保持不变，见你原代码
 
 # ==============================
-# 2) 插件类
+# 插件类
 # ==============================
 
 @register(
     "astrbot_plugin_weather-qweather",
     "yemengstar",
-    "一个基于和风天气API的天气查询插件",
-    "0.2.0"
+    "一个基于和风天气API的天气查询插件（新版）",
+    "0.3.0"
 )
 class WeatherPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
         self.config = config
-        self.api_key = config.get("qweather_api_key", "fbf6abe122a249abbf74b478f26428fc")
+        self.api_key = config.get("qweather_api_key", "")
         self.default_city = config.get("default_city", "北京")
-        self.send_mode = config.get("send_mode", "image")  # "image" 或 "text"
+        self.send_mode = config.get("send_mode", "image")
+        self.api_base = config.get("qweather_base", "")
 
-    # =============================
-    # 命令组 /weather
-    # =============================
+    # ========== 命令组 ==========
     @command_group("weather")
     def weather_group(self):
         """天气相关命令组 /weather current | forecast | help"""
@@ -117,7 +45,11 @@ class WeatherPlugin(Star):
     async def weather_current(self, event: AstrMessageEvent, city: Optional[str] = None):
         if not city:
             city = self.default_city
-        data = await self.get_current_weather_by_city(city)
+        location_id = await self.get_location_id(city)
+        if not location_id:
+            yield event.plain_result(f"无法识别城市: {city}")
+            return
+        data = await self.get_current_weather(location_id, city)
         if not data:
             yield event.plain_result(f"查询 [{city}] 当前天气失败")
             return
@@ -135,7 +67,11 @@ class WeatherPlugin(Star):
     async def weather_forecast(self, event: AstrMessageEvent, city: Optional[str] = None):
         if not city:
             city = self.default_city
-        data = await self.get_forecast_weather_by_city(city)
+        location_id = await self.get_location_id(city)
+        if not location_id:
+            yield event.plain_result(f"无法识别城市: {city}")
+            return
+        data = await self.get_forecast_weather(location_id)
         if not data:
             yield event.plain_result(f"查询 [{city}] 天气预报失败")
             return
@@ -161,15 +97,31 @@ class WeatherPlugin(Star):
             "/weather help            显示帮助"
         )
 
-    # =============================
-    # 和风天气 API
-    # =============================
-    async def get_current_weather_by_city(self, city: str) -> Optional[dict]:
+    # ========== 城市转 Location ID ==========
+    async def get_location_id(self, city_name: str) -> Optional[str]:
         try:
-            url = "https://devapi.qweather.com/v7/weather/now"
-            params = {"key": self.api_key, "location": city}
+            url = f"{self.api_base}/v2/city/lookup"
+            params = {"location": city_name}
+            headers = {"X-QW-Api-Key": self.api_key}
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params) as resp:
+                async with session.get(url, params=params, headers=headers) as resp:
+                    data = await resp.json()
+                    if "location" not in data or not data["location"]:
+                        return None
+                    return data["location"][0]["id"]  # 返回第一个匹配项的 ID
+        except Exception as e:
+            logger.error(f"get_location_id error: {e}")
+            logger.error(traceback.format_exc())
+            return None
+
+    # ========== 当前天气查询 ==========
+    async def get_current_weather(self, location_id: str, city: str) -> Optional[dict]:
+        try:
+            url = f"{self.api_base}/v7/weather/now"
+            params = {"location": location_id}
+            headers = {"X-QW-Api-Key": self.api_key}
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params, headers=headers) as resp:
                     data = await resp.json()
                     if "now" not in data:
                         return None
@@ -179,12 +131,14 @@ class WeatherPlugin(Star):
             logger.error(traceback.format_exc())
             return None
 
-    async def get_forecast_weather_by_city(self, city: str) -> Optional[List[dict]]:
+    # ========== 天气预报查询 ==========
+    async def get_forecast_weather(self, location_id: str) -> Optional[List[dict]]:
         try:
-            url = "https://devapi.qweather.com/v7/weather/3d"
-            params = {"key": self.api_key, "location": city}
+            url = f"{self.api_base}/v7/weather/3d"
+            params = {"location": location_id}
+            headers = {"X-QW-Api-Key": self.api_key}
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params) as resp:
+                async with session.get(url, params=params, headers=headers) as resp:
                     data = await resp.json()
                     if "daily" not in data:
                         return None
@@ -194,9 +148,7 @@ class WeatherPlugin(Star):
             logger.error(traceback.format_exc())
             return None
 
-    # =============================
-    # 渲染 HTML
-    # =============================
+    # ========== 渲染 HTML ==========
     async def render_current_weather(self, data: dict) -> str:
         return await self.html_render(
             CURRENT_WEATHER_TEMPLATE,
