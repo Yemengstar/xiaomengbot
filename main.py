@@ -89,7 +89,7 @@ class WeatherPlugin(Star):
             yield event.plain_result(text)
 
     @weather_group.command("help")
-    async def weather_help(self, event: AstrMessageEvent):
+    async def weather_help(self, event: AstrMessageEvent, *args):
         yield event.plain_result(
             "=== 天气查询插件命令 ===\n"
             "/weather current <城市>  查询当前天气\n"
