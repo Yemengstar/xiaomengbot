@@ -107,8 +107,9 @@ FORECAST_TEMPLATE = """
       border-radius: 16px;
       padding: 30px 50px;
       box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-      width: 90%;
-      max-width: 1000px;
+      width: 92%;
+      max-width: 1100px;
+      overflow-y: auto;
     }
     h2 {
       font-size: 48px;
@@ -125,19 +126,33 @@ FORECAST_TEMPLATE = """
       background: rgba(255,255,255,0.1);
       border-radius: 12px;
       padding: 16px 24px;
-      margin: 10px 0;
-      font-size: 26px;
+      margin: 12px 0;
+      font-size: 22px;
+      line-height: 1.6;
     }
     .day-title {
       font-weight: bold;
-      font-size: 30px;
+      font-size: 28px;
       margin-bottom: 8px;
       color: #ffeb3b;
+    }
+    .weather-block {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .weather-block div {
+      flex: 1;
+    }
+    .sub-info {
+      font-size: 20px;
+      color: #f0f0f0;
     }
     .source-info {
       margin-top: 25px;
       font-size: 20px;
       color: #eee;
+      text-align: center;
     }
   </style>
 </head>
@@ -146,15 +161,40 @@ FORECAST_TEMPLATE = """
     <div class="card">
       <h2>未来{{ total_days }}天天气预报</h2>
       <div class="city-info"><strong>城市:</strong> {{ city }}</div>
+      
       {% for day in days %}
       <div class="day-item">
-        <div class="day-title">{{ day.date }}</div>
-        <div><strong>白天:</strong> {{ day.text_day }} — {{ day.high }}℃</div>
-        <div><strong>夜晚:</strong> {{ day.text_night }} — {{ day.low }}℃</div>
-        <div><strong>湿度:</strong> {{ day.humidity }}%　<strong>风速:</strong> {{ day.wind_speed }} km/h</div>
+        <div class="day-title">{{ day.fxDate }}</div>
+        
+        <div class="weather-block">
+          <div><strong>白天:</strong> {{ day.textDay }}　🌡 {{ day.tempMax }}℃</div>
+          <div><strong>夜晚:</strong> {{ day.textNight }}　🌡 {{ day.tempMin }}℃</div>
+        </div>
+        
+        <div class="weather-block">
+          <div><strong>风向(日):</strong> {{ day.windDirDay }} {{ day.windScaleDay }}级</div>
+          <div><strong>风向(夜):</strong> {{ day.windDirNight }} {{ day.windScaleNight }}级</div>
+        </div>
+        
+        <div class="weather-block sub-info">
+          <div>湿度: {{ day.humidity }}%</div>
+          <div>气压: {{ day.pressure }} hPa</div>
+          <div>能见度: {{ day.vis }} km</div>
+          <div>紫外线: {{ day.uvIndex }}</div>
+        </div>
+        
+        <div class="weather-block sub-info">
+          <div>日出: {{ day.sunrise }}</div>
+          <div>日落: {{ day.sunset }}</div>
+          <div>月相: {{ day.moonPhase }}</div>
+        </div>
       </div>
       {% endfor %}
-      <div class="source-info">数据来源: 和风天气（QWeather）</div>
+      
+      <div class="source-info">
+        数据来源: 和风天气（QWeather）<br>
+        更新时间: {{ updateTime }}
+      </div>
     </div>
   </div>
 </body>
@@ -177,7 +217,7 @@ class WeatherPlugin(Star):
         super().__init__(context)
         self.config = config
         self.api_key = config.get("qweather_api_key", "")
-        self.default_city = config.get("default_city", "上海")
+        self.default_city = config.get("default_city", "")
         self.send_mode = config.get("send_mode", "text")
         self.api_base = config.get("qweather_base", "")
 
