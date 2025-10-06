@@ -87,9 +87,9 @@ FORECAST_TEMPLATE = """
       margin: 0;
       padding: 0;
       width: 1280px;
-      height: 720px;
+      height: 1080px;
       font-family: "Microsoft YaHei", sans-serif;
-      background: linear-gradient(135deg, #89f7fe, #66a6ff);
+      background: linear-gradient(135deg, #6db3f2, #1e69de);
       color: #fff;
     }
     .forecast-container {
