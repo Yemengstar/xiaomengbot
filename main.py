@@ -19,69 +19,63 @@ CURRENT_WEATHER_TEMPLATE = """
     html, body {
       margin: 0;
       padding: 0;
-      width: 1280px; /* 确保匹配 render 预设的图片尺寸 */
+      width: 1280px;
       height: 720px;
-      background-color: #fff;
+      font-family: "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #6db3f2, #1e69de);
+      color: #fff;
     }
     .weather-container {
       width: 100%;
       height: 100%;
-      padding: 8px;
       display: flex;
       flex-direction: column;
-      justify-content: center; /* 垂直居中 */
-      align-items: center; /* 水平居中 */
-      background-color: #ffffff;
-      color: #333;
-      font-family: sans-serif;
-      font-size: 30px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-    }
-    .weather-container h2 {
-      margin-top: 0;
-      color: #4e6ef2;
+      justify-content: center;
+      align-items: center;
       text-align: center;
-      font-size: 40px;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 40px 60px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    h2 {
+      font-size: 56px;
+      margin: 0 0 30px;
+      color: #fff;
+      font-weight: 700;
     }
     .weather-info {
-      margin-bottom: 10px;
+      font-size: 32px;
+      margin: 10px 0;
+    }
+    .weather-info strong {
+      color: #ffe082;
     }
     .source-info {
-      border-top: 1px solid #ddd;
-      margin-top: 12px;
-      padding-top: 12px;
-      font-size: 16px;
-      color: #999;
+      margin-top: 30px;
+      font-size: 20px;
+      color: #ddd;
     }
   </style>
 </head>
 <body>
   <div class="weather-container">
-    <h2>当前天气</h2>
-    
-    <div class="weather-info">
-      <strong>城市:</strong> {{ city }}
-    </div>
-    <div class="weather-info">
-      <strong>天气:</strong> {{ desc }}
-    </div>
-    <div class="weather-info">
-      <strong>温度:</strong> {{ temp }}℃
-    </div>
-    <div class="weather-info">
-      <strong>湿度:</strong> {{ humidity }}%
-    </div>
-    <div class="weather-info">
-      <strong>风速:</strong> {{ wind_speed }} km/h
-    </div>
-    
-    <div class="source-info">
-      数据来源: 和风天气（QWeather）
+    <div class="card">
+      <h2>当前天气</h2>
+      <div class="weather-info"><strong>城市:</strong> {{ city }}</div>
+      <div class="weather-info"><strong>天气:</strong> {{ text }}</div>
+      <div class="weather-info"><strong>温度:</strong> {{ temp }}℃</div>
+      <div class="weather-info"><strong>湿度:</strong> {{ humidity }}%</div>
+      <div class="weather-info"><strong>风速:</strong> {{ windSpeed }} km/h</div>
+      <div class="source-info">数据来源: 和风天气（QWeather）</div>
     </div>
   </div>
 </body>
 </html>
+
 """
 
 FORECAST_TEMPLATE = """
@@ -94,69 +88,73 @@ FORECAST_TEMPLATE = """
       padding: 0;
       width: 1280px;
       height: 720px;
-      background-color: #fff;
+      font-family: "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #89f7fe, #66a6ff);
+      color: #fff;
     }
     .forecast-container {
       width: 100%;
       height: 100%;
-      padding: 8px;
       display: flex;
       flex-direction: column;
-      justify-content: center;
       align-items: center;
-      background-color: #fff;
-      color: #333;
-      font-family: sans-serif;
-      font-size: 30px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-    }
-    .forecast-container h2 {
-      margin-top: 0;
-      color: #4e6ef2;
+      justify-content: center;
       text-align: center;
-      font-size: 40px;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 30px 50px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+      width: 90%;
+      max-width: 1000px;
+    }
+    h2 {
+      font-size: 48px;
+      margin: 0 0 20px;
+      font-weight: 700;
     }
     .city-info {
-      margin-bottom: 8px;
+      font-size: 28px;
+      margin-bottom: 20px;
+      color: #ffe082;
     }
     .day-item {
-      margin-bottom: 8px;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 4px;
+      text-align: left;
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 16px 24px;
+      margin: 10px 0;
+      font-size: 26px;
     }
     .day-title {
       font-weight: bold;
-      color: #4e6ef2;
-      margin-bottom: 4px;
+      font-size: 30px;
+      margin-bottom: 8px;
+      color: #ffeb3b;
     }
     .source-info {
-      font-size: 16px;
-      color: #999;
-      margin-top: 12px;
-      border-top: 1px solid #ddd;
-      padding-top: 8px;
+      margin-top: 25px;
+      font-size: 20px;
+      color: #eee;
     }
   </style>
 </head>
 <body>
   <div class="forecast-container">
-    <h2>未来{{ total_days }}天天气预报</h2>
-    <div class="city-info">
-      <strong>城市:</strong> {{ city }}
-    </div>
-
-    {% for day in days %}
-    <div class="day-item">
-      <div class="day-title">{{ day.date }}</div>
-      <div><strong>白天:</strong> {{ day.text_day }} — {{ day.high }}℃</div>
-      <div><strong>夜晚:</strong> {{ day.text_night }} — {{ day.low }}℃</div>
-      <div><strong>湿度:</strong> {{ day.humidity }}%  <strong>风速:</strong> {{ day.wind_speed }} km/h</div>
-    </div>
-    {% endfor %}
-
-    <div class="source-info">
-      数据来源: 和风天气（QWeather）
+    <div class="card">
+      <h2>未来{{ total_days }}天天气预报</h2>
+      <div class="city-info"><strong>城市:</strong> {{ city }}</div>
+      {% for day in days %}
+      <div class="day-item">
+        <div class="day-title">{{ day.date }}</div>
+        <div><strong>白天:</strong> {{ day.text_day }} — {{ day.high }}℃</div>
+        <div><strong>夜晚:</strong> {{ day.text_night }} — {{ day.low }}℃</div>
+        <div><strong>湿度:</strong> {{ day.humidity }}%　<strong>风速:</strong> {{ day.wind_speed }} km/h</div>
+      </div>
+      {% endfor %}
+      <div class="source-info">数据来源: 和风天气（QWeather）</div>
     </div>
   </div>
 </body>
@@ -169,18 +167,18 @@ FORECAST_TEMPLATE = """
 # ==============================
 
 @register(
-    "astrbot_plugin_weather-qweather",
+    "小梦bot",
     "yemengstar",
-    "一个基于和风天气API的天气查询插件（新版）",
-    "0.3.1"
+    "一个基于和风天气API的天气查询插件",
+    "0.3.2"
 )
 class WeatherPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
         self.config = config
         self.api_key = config.get("qweather_api_key", "")
-        self.default_city = config.get("default_city", "")
-        self.send_mode = config.get("send_mode", "")
+        self.default_city = config.get("default_city", "上海")
+        self.send_mode = config.get("send_mode", "text")
         self.api_base = config.get("qweather_base", "")
 
     # ========== 命令组 ==========
