@@ -193,7 +193,6 @@ FORECAST_TEMPLATE = """
       
       <div class="source-info">
         数据来源: 和风天气（QWeather）<br>
-        更新时间: {{ updateTime }}
       </div>
     </div>
   </div>
@@ -217,7 +216,7 @@ class WeatherPlugin(Star):
         super().__init__(context)
         self.config = config
         self.api_key = config.get("qweather_api_key", "")
-        self.default_city = config.get("default_city", "")
+        self.default_city = config.get("default_city", "西安")
         self.send_mode = config.get("send_mode", "text")
         self.api_base = config.get("qweather_base", "")
 
