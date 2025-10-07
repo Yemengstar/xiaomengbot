@@ -83,7 +83,7 @@ CURRENT_WEATHER_TEMPLATE = """
       <div class="weather-info"><strong>风向:</strong> {{ windDir }}　<strong>风速:</strong> {{ windSpeed }} km/h ({{ windScale }}级)</div>
       <div class="weather-info"><strong>湿度:</strong> {{ humidity }}%</div>
 
-      <div class="sub-info">🌧 降水量: {{ precip }} mm　🌡 气壓: {{ pressure }} hPa</div>
+      <div class="sub-info">🌧 降水量: {{ precip }} mm　🌡 气压: {{ pressure }} hPa</div>
       <div class="sub-info">👁 能见度: {{ vis }} km　☁️ 云量: {{ cloud }}%</div>
       <div class="sub-info">💧 露点温度: {{ dew }}℃</div>
 
