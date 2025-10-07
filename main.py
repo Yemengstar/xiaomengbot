@@ -300,7 +300,7 @@ class WeatherPlugin(Star):
             "=== 和风天气插件命令列表 ===\n"
             "/weather current <城市>  查看当前实况\n"
             "/weather forecast <城市> 查看未来3天天气预报\n"
-            "/weather help            显示本帮助\n"
+            "/weather help            显示本帮助"
             )
         yield event.plain_result(msg)
 
