@@ -77,9 +77,6 @@ CURRENT_WEATHER_TEMPLATE = """
     <div class="card">
       <h2>当前天气</h2>
 
-      <!-- 天气图标 -->
-      <img class="weather-icon" src="https://icons.qweather.com/{{ icon }}.png" alt="{{ text }}"/>
-
       <div class="weather-info"><strong>城市:</strong> {{ city }}</div>
       <div class="weather-info"><strong>天气:</strong> {{ text }}</div>
       <div class="weather-info"><strong>温度:</strong> {{ temp }}℃　(体感: {{ feelsLike }}℃)</div>
@@ -91,12 +88,9 @@ CURRENT_WEATHER_TEMPLATE = """
       <div class="sub-info">💧 露点温度: {{ dew }}℃</div>
 
       <div class="sub-info">⏱ 观测时间: {{ obsTime }}</div>
-      <div class="sub-info">🔄 更新时间: {{ updateTime }}</div>
 
       <div class="source-info">
-        数据来源: {{ sources|join(", ") }}<br/>
-        许可: {{ license|join(", ") }}<br/>
-        <a href="{{ fxLink }}" style="color:#ffe082;">查看详情</a>
+        数据来源: 和风天气（QWeather）<br>
       </div>
     </div>
   </div>
