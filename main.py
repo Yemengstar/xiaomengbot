@@ -40,23 +40,34 @@ CURRENT_WEATHER_TEMPLATE = """
       border-radius: 16px;
       padding: 40px 60px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      max-width: 900px;
     }
     h2 {
       font-size: 56px;
-      margin: 0 0 30px;
+      margin: 0 0 20px;
       color: #fff;
       font-weight: 700;
     }
+    .weather-icon {
+      width: 100px;
+      height: 100px;
+      margin: 10px auto;
+    }
     .weather-info {
-      font-size: 32px;
-      margin: 10px 0;
+      font-size: 28px;
+      margin: 8px 0;
     }
     .weather-info strong {
       color: #ffe082;
     }
+    .sub-info {
+      font-size: 22px;
+      margin: 6px 0;
+      color: #f0f0f0;
+    }
     .source-info {
-      margin-top: 30px;
-      font-size: 20px;
+      margin-top: 20px;
+      font-size: 18px;
       color: #ddd;
     }
   </style>
@@ -65,12 +76,28 @@ CURRENT_WEATHER_TEMPLATE = """
   <div class="weather-container">
     <div class="card">
       <h2>当前天气</h2>
+
+      <!-- 天气图标 -->
+      <img class="weather-icon" src="https://icons.qweather.com/{{ icon }}.png" alt="{{ text }}"/>
+
       <div class="weather-info"><strong>城市:</strong> {{ city }}</div>
       <div class="weather-info"><strong>天气:</strong> {{ text }}</div>
-      <div class="weather-info"><strong>温度:</strong> {{ temp }}℃</div>
+      <div class="weather-info"><strong>温度:</strong> {{ temp }}℃　(体感: {{ feelsLike }}℃)</div>
+      <div class="weather-info"><strong>风向:</strong> {{ windDir }}　<strong>风速:</strong> {{ windSpeed }} km/h ({{ windScale }}级)</div>
       <div class="weather-info"><strong>湿度:</strong> {{ humidity }}%</div>
-      <div class="weather-info"><strong>风速:</strong> {{ windSpeed }} km/h</div>
-      <div class="source-info">数据来源: 和风天气（QWeather）</div>
+
+      <div class="sub-info">🌧 降水量: {{ precip }} mm　🌡 气壓: {{ pressure }} hPa</div>
+      <div class="sub-info">👁 能见度: {{ vis }} km　☁️ 云量: {{ cloud }}%</div>
+      <div class="sub-info">💧 露点温度: {{ dew }}℃</div>
+
+      <div class="sub-info">⏱ 观测时间: {{ obsTime }}</div>
+      <div class="sub-info">🔄 更新时间: {{ updateTime }}</div>
+
+      <div class="source-info">
+        数据来源: {{ sources|join(", ") }}<br/>
+        许可: {{ license|join(", ") }}<br/>
+        <a href="{{ fxLink }}" style="color:#ffe082;">查看详情</a>
+      </div>
     </div>
   </div>
 </body>
