@@ -230,7 +230,7 @@ FORECAST_TEMPLATE = """
     "小梦bot",
     "yemengstar",
     "一个基于和风天气API的天气查询插件",
-    "0.3.3"
+    "0.5.0"
 )
 class WeatherPlugin(Star):
     def __init__(self, context: Context, config: dict):
