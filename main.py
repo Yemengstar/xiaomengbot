@@ -227,17 +227,17 @@ FORECAST_TEMPLATE = """
 # ==============================
 
 @register(
-    "小梦bot",
+    "astrbot_plugin_qweather",
     "yemengstar",
     "一个基于和风天气API的天气查询插件",
-    "0.5.0"
+    "0.6.0"
 )
 class WeatherPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
         self.config = config
         self.api_key = config.get("qweather_api_key", "")
-        self.default_city = config.get("default_city", "西安")
+        self.default_city = config.get("default_city", "上海")
         self.send_mode = config.get("send_mode", "text")
         self.api_base = config.get("qweather_base", "")
 
