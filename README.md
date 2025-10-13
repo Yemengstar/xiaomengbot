@@ -17,19 +17,19 @@
 
 ```json
 {
-  "qweather_api_key": "你的和风天气API密钥",
+  "qweather_api_key": "API Key",
   "default_city": "西安",
   "send_mode": "text",
-  "qweather_base": "api.qweather.com"
+  "qweather_base": "API Host"
 }
 ```
 
 参数说明：
 
-* `qweather_api_key`：在 [和风天气控制台](https://dev.qweather.com/) 申请的 API Key
+* `qweather_api_key`：在 [和风天气控制台](https://console.qweather.com/) 申请的 API Key
 * `default_city`：默认查询的城市（如果用户未指定）
 * `send_mode`：输出模式，支持 `"text"` 或 `"image"`
-* `qweather_base`：和风天气 API 域名，一般为 `api.qweather.com`
+* `qweather_base`：和风天气 API Host地址`
 
 ## 使用方法
 
